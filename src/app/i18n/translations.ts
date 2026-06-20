@@ -4,7 +4,7 @@ export const translations = {
     dashboard: 'Dashboard',
     transactions: 'Transactions',
     budgets: 'Budgets',
-    suggestions: 'Suggestions',
+    suggestions: 'AI Advisor',
     profile: 'Profile',
 
     // Auth / Login
@@ -364,7 +364,7 @@ export const translations = {
     dashboard: 'Tableau de bord',
     transactions: 'Transactions',
     budgets: 'Budgets',
-    suggestions: 'Suggestions',
+    suggestions: 'AI Advisor',
     profile: 'Profil',
 
     // Auth / Login

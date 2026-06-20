@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { toast } from 'sonner';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 
 const DEFAULT_PROFILE = {
   name: '',
@@ -35,7 +36,8 @@ const DEFAULT_SETTINGS = {
 
 export const Profile = () => {
   const { theme, setTheme } = useTheme();
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage, t, currency: ctxCurrency, setCurrency: setCtxCurrency } = useLanguage();
+  const { logout } = useAuth();
 
   // User profile state - load from localStorage on mount
   const [userProfile, setUserProfile] = useState(() => {
@@ -113,10 +115,12 @@ export const Profile = () => {
     try {
       const settingsToSave = {
         ...settings,
-        theme: theme, // Include current theme
-        language: language, // Include current language
+        theme: theme,
+        language: language,
       };
       localStorage.setItem('finbee_userSettings', JSON.stringify(settingsToSave));
+      // Push currency into context so all pages update immediately
+      setCtxCurrency(settings.currency);
       toast.success(t('settingsSaved'));
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -144,17 +148,8 @@ export const Profile = () => {
   };
 
   const handleLogout = () => {
-    // Clear all FinBee data from localStorage
-    localStorage.removeItem('finbee_userProfile');
-    localStorage.removeItem('finbee_userSettings');
-    localStorage.removeItem('finbee_authenticated');
-
+    logout();
     toast.success(t('loggedOut'));
-
-    // Reload the page to show login page
-    setTimeout(() => {
-      window.location.reload();
-    }, 500);
   };
 
   return (

@@ -31,7 +31,7 @@ const EXPENSE_CATEGORIES = [
 ];
 
 export const Calendar = () => {
-  const { t } = useLanguage();
+  const { t, currencySymbol } = useLanguage();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [futureExpenses, setFutureExpenses] = useState<FutureExpense[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -48,13 +48,37 @@ export const Calendar = () => {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Load future expenses from localStorage
+  // Load future expenses from localStorage (seed with demo data if empty)
   useEffect(() => {
     try {
       const saved = localStorage.getItem('finbee_futureExpenses');
       if (saved) {
-        setFutureExpenses(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setFutureExpenses(parsed);
+          return;
+        }
       }
+      // Seed demo data for advisor presentation
+      const demo: FutureExpense[] = [
+        // --- Past (overdue, not paid) ---
+        { id: 'demo_1', description: 'Library Fine – Overdue Book Return', amount: 15,   category: 'education',   dueDate: '2026-06-05', isPaid: false, createdAt: '2026-05-30T08:00:00.000Z' },
+        { id: 'demo_2', description: 'Campus Parking Season Pass',          amount: 80,   category: 'transport',   dueDate: '2026-06-10', isPaid: false, createdAt: '2026-06-01T08:00:00.000Z' },
+        // --- Past (paid) ---
+        { id: 'demo_3', description: 'Gym Membership – June',               amount: 50,   category: 'entertainment', dueDate: '2026-06-08', isPaid: true,  createdAt: '2026-05-28T08:00:00.000Z' },
+        { id: 'demo_4', description: 'Phone Bill – Digi Postpaid',          amount: 45,   category: 'utilities',   dueDate: '2026-06-12', isPaid: true,  createdAt: '2026-06-05T08:00:00.000Z' },
+        { id: 'demo_5', description: 'Group Project Printing Costs',         amount: 22,   category: 'education',   dueDate: '2026-06-15', isPaid: true,  createdAt: '2026-06-10T08:00:00.000Z' },
+        // --- Upcoming (this month) ---
+        { id: 'demo_6', description: 'Monthly Rent – July 2026',            amount: 1200, category: 'housing',     dueDate: '2026-06-28', isPaid: false, createdAt: '2026-06-01T08:00:00.000Z' },
+        { id: 'demo_7', description: 'Internet Bill – TM Unifi',            amount: 89,   category: 'utilities',   dueDate: '2026-06-25', isPaid: false, createdAt: '2026-06-01T08:00:00.000Z' },
+        { id: 'demo_8', description: 'Final Exam Stationery Pack',           amount: 35,   category: 'education',   dueDate: '2026-06-22', isPaid: false, createdAt: '2026-06-18T08:00:00.000Z' },
+        // --- Future (July 2026) ---
+        { id: 'demo_9',  description: 'University Exam Registration Fee',   amount: 250,  category: 'education',   dueDate: '2026-07-05', isPaid: false, createdAt: '2026-06-10T08:00:00.000Z' },
+        { id: 'demo_10', description: 'Health Insurance Premium',           amount: 80,   category: 'utilities',   dueDate: '2026-07-10', isPaid: false, createdAt: '2026-06-10T08:00:00.000Z' },
+        { id: 'demo_11', description: 'Laptop Servicing & Cleaning',        amount: 120,  category: 'shopping',    dueDate: '2026-07-15', isPaid: false, createdAt: '2026-06-15T08:00:00.000Z' },
+        { id: 'demo_12', description: 'Bus Ticket Home – Semester Break',   amount: 95,   category: 'transport',   dueDate: '2026-07-20', isPaid: false, createdAt: '2026-06-15T08:00:00.000Z' },
+      ];
+      setFutureExpenses(demo);
     } catch (error) {
       console.error('Error loading future expenses:', error);
     }
@@ -243,7 +267,7 @@ export const Calendar = () => {
                     : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
                 }`}
               >
-                ${exp.amount.toFixed(0)}
+                {currencySymbol}{exp.amount.toFixed(0)}
               </div>
             ))}
             {dayExpenses.length > 2 && (
@@ -327,7 +351,7 @@ export const Calendar = () => {
                         </p>
                       </div>
                       <p className="font-bold text-sm text-red-600 dark:text-red-400">
-                        ${expense.amount.toFixed(2)}
+                        {currencySymbol}{expense.amount.toFixed(2)}
                       </p>
                     </div>
                     <p className="text-xs text-red-600 dark:text-red-400">
@@ -388,7 +412,7 @@ export const Calendar = () => {
                           {new Date(expense.dueDate).toLocaleDateString()}
                         </p>
                       </div>
-                      <p className="font-bold text-sm">${expense.amount.toFixed(2)}</p>
+                      <p className="font-bold text-sm">{currencySymbol}{expense.amount.toFixed(2)}</p>
                     </div>
                     <p className="text-xs text-neutral-600 dark:text-neutral-400">
                       {getDaysUntilDue(expense.dueDate)} {t('daysUntilDue')}

@@ -1,9 +1,271 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFinance, Transaction } from '../context/FinanceContext';
-import { Plus, Search, Trash2, Filter, Printer } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { Plus, Search, Trash2, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { toast } from 'sonner';
+
+// ─── Custom Month Picker ─────────────────────────────────────────────────────
+
+const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const FULL_MONTHS  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function formatMonthDisplay(ym: string) {
+  if (!ym) return 'Select month';
+  const [y, m] = ym.split('-');
+  return `${FULL_MONTHS[parseInt(m, 10) - 1]}, ${y}`;
+}
+
+function CustomMonthPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const today = new Date();
+  const [viewYear, setViewYear] = useState(() => value ? parseInt(value.split('-')[0]) : today.getFullYear());
+
+  const thisMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const selectMonth = (monthIndex: number) => {
+    const m = String(monthIndex + 1).padStart(2, '0');
+    onChange(`${viewYear}-${m}`);
+    setOpen(false);
+  };
+
+  const selectedYear = value ? parseInt(value.split('-')[0]) : null;
+  const selectedMonthIdx = value ? parseInt(value.split('-')[1]) - 1 : null;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex h-9 items-center gap-2 rounded-md border border-blue-300 dark:border-blue-700 bg-white dark:bg-neutral-900 px-3 py-2 text-sm text-blue-900 dark:text-blue-100 hover:bg-blue-50 dark:hover:bg-blue-900/40 focus:outline-none focus:ring-2 focus:ring-blue-600 whitespace-nowrap"
+      >
+        <svg className="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+        </svg>
+        {formatMonthDisplay(value)}
+      </button>
+
+      {open && (
+        <div className="absolute top-full right-0 z-50 mt-1 w-64 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-xl p-4">
+          {/* Year row */}
+          <div className="flex items-center justify-between mb-3">
+            <button type="button" onClick={() => setViewYear(y => y - 1)} className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-sm font-semibold text-neutral-900 dark:text-white">{viewYear}</span>
+            <button type="button" onClick={() => setViewYear(y => y + 1)} className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* 3×4 month grid */}
+          <div className="grid grid-cols-3 gap-1.5 mb-3">
+            {SHORT_MONTHS.map((m, i) => {
+              const isSelected = selectedYear === viewYear && selectedMonthIdx === i;
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => selectMonth(i)}
+                  className={cn(
+                    'py-1.5 rounded-lg text-sm font-medium transition-colors',
+                    isSelected
+                      ? 'bg-blue-600 text-white'
+                      : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                  )}
+                >
+                  {m}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-between pt-3 border-t border-neutral-100 dark:border-neutral-800">
+            <button
+              type="button"
+              onClick={() => { onChange(''); setOpen(false); }}
+              className="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              onClick={() => { setViewYear(today.getFullYear()); onChange(thisMonth); setOpen(false); }}
+              className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+            >
+              This month
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Custom Date Picker ──────────────────────────────────────────────────────
+
+const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function formatDisplayDate(iso: string) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function buildCalendarDays(year: number, month: number) {
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (number | null)[] = Array(firstDay).fill(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+  return cells;
+}
+
+function CustomDatePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const today = new Date();
+  const todayIso = today.toISOString().substring(0, 10);
+
+  const parsed = value ? new Date(value + 'T00:00:00') : today;
+  const [viewYear, setViewYear] = useState(parsed.getFullYear());
+  const [viewMonth, setViewMonth] = useState(parsed.getMonth());
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const cells = buildCalendarDays(viewYear, viewMonth);
+
+  const selectDay = (day: number) => {
+    const m = String(viewMonth + 1).padStart(2, '0');
+    const d = String(day).padStart(2, '0');
+    onChange(`${viewYear}-${m}-${d}`);
+    setOpen(false);
+  };
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+  };
+
+  const goToday = () => {
+    setViewYear(today.getFullYear());
+    setViewMonth(today.getMonth());
+    onChange(todayIso);
+    setOpen(false);
+  };
+
+  return (
+    <div ref={ref} className="relative w-full">
+      {/* Trigger */}
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex h-10 w-full items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-left text-neutral-900 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:hover:bg-neutral-800"
+      >
+        <span className={value ? '' : 'text-neutral-400 dark:text-neutral-500'}>
+          {value ? formatDisplayDate(value) : 'Pick a date'}
+        </span>
+        <svg className="w-4 h-4 text-neutral-400 dark:text-neutral-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+        </svg>
+      </button>
+
+      {/* Popover */}
+      {open && (
+        <div className="absolute top-full right-0 z-50 mt-1 w-72 rounded-xl border border-neutral-200 bg-white shadow-xl dark:border-neutral-700 dark:bg-neutral-900 p-4">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-3">
+            <button type="button" onClick={prevMonth} className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-sm font-semibold text-neutral-900 dark:text-white">
+              {MONTHS[viewMonth]}, {viewYear}
+            </span>
+            <button type="button" onClick={nextMonth} className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Day headers */}
+          <div className="grid grid-cols-7 mb-1">
+            {DAYS.map((d, i) => (
+              <div key={i} className="text-center text-xs font-medium text-neutral-400 dark:text-neutral-500 py-1">{d}</div>
+            ))}
+          </div>
+
+          {/* Day grid */}
+          <div className="grid grid-cols-7 gap-y-1">
+            {cells.map((day, i) => {
+              if (!day) return <div key={i} />;
+              const m = String(viewMonth + 1).padStart(2, '0');
+              const dayStr = `${viewYear}-${m}-${String(day).padStart(2, '0')}`;
+              const isSelected = dayStr === value;
+              const isToday = dayStr === todayIso;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => selectDay(day)}
+                  className={cn(
+                    'w-full aspect-square flex items-center justify-center rounded-lg text-sm transition-colors',
+                    isSelected
+                      ? 'bg-blue-600 text-white font-semibold'
+                      : isToday
+                      ? 'border border-blue-400 text-blue-600 dark:border-blue-500 dark:text-blue-400 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                      : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                  )}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-between mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+            <button
+              type="button"
+              onClick={() => { onChange(''); setOpen(false); }}
+              className="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              onClick={goToday}
+              className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+            >
+              Today
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 import {
   AlertDialog,
@@ -23,6 +285,7 @@ function cn(...inputs: ClassValue[]) {
 
 export const Transactions = () => {
   const { transactions, addTransaction, deleteTransaction, balance, totalIncome, totalExpense } = useFinance();
+  const { currencySymbol } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7));
@@ -48,7 +311,7 @@ export const Transactions = () => {
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0 || !description) return;
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0 || !description || !date) return;
 
     addTransaction({
       amount: Number(amount),
@@ -204,15 +467,15 @@ export const Transactions = () => {
         <div class="summary">
           <div class="summary-item">
             <div class="summary-label">Total Income</div>
-            <div class="summary-value income">+$${monthlyIncome.toFixed(2)}</div>
+            <div class="summary-value income">+${currencySymbol}${monthlyIncome.toFixed(2)}</div>
           </div>
           <div class="summary-item">
             <div class="summary-label">Total Expenses</div>
-            <div class="summary-value expense">-$${monthlyExpense.toFixed(2)}</div>
+            <div class="summary-value expense">-${currencySymbol}${monthlyExpense.toFixed(2)}</div>
           </div>
           <div class="summary-item">
             <div class="summary-label">Net Balance</div>
-            <div class="summary-value balance">$${monthlyBalance.toFixed(2)}</div>
+            <div class="summary-value balance">${currencySymbol}${monthlyBalance.toFixed(2)}</div>
           </div>
         </div>
 
@@ -234,7 +497,7 @@ export const Transactions = () => {
                 <td><span class="category-badge">${tx.category}</span></td>
                 <td>${tx.type === 'income' ? '✓ Income' : '✗ Expense'}</td>
                 <td class="${tx.type === 'income' ? 'amount-income' : 'amount-expense'}" style="text-align: right">
-                  ${tx.type === 'income' ? '+' : '-'}$${tx.amount.toFixed(2)}
+                  ${tx.type === 'income' ? '+' : '-'}${currencySymbol}${tx.amount.toFixed(2)}
                 </td>
               </tr>
             `).join('')}
@@ -286,13 +549,8 @@ export const Transactions = () => {
             <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Print Monthly Report</p>
             <p className="text-xs text-blue-700 dark:text-blue-300">Select a month and print your transaction details</p>
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="flex h-9 w-full sm:w-auto rounded-md border border-blue-300 dark:border-blue-700 bg-white dark:bg-neutral-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-            />
+          <div className="flex gap-2 w-full sm:w-auto items-center">
+            <CustomMonthPicker value={selectedMonth} onChange={setSelectedMonth} />
             <button
               onClick={handlePrintMonthly}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 bg-blue-600 text-white hover:bg-blue-700 h-9 px-4 shadow-sm whitespace-nowrap"
@@ -332,7 +590,7 @@ export const Transactions = () => {
               />
             </div>
             <div className="space-y-2 lg:col-span-1">
-              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Amount ($)</label>
+              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Amount ({currencySymbol})</label>
               <input 
                 required
                 type="number"
@@ -355,14 +613,8 @@ export const Transactions = () => {
               </select>
             </div>
             <div className="space-y-2 lg:col-span-1">
-              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Date</label>
-              <input 
-                required
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:ring-offset-neutral-950"
-              />
+              <label className="text-sm font-medium leading-none">Date</label>
+              <CustomDatePicker value={date} onChange={setDate} />
             </div>
             <div className="lg:col-span-6 flex justify-end">
               <button 
@@ -430,7 +682,7 @@ export const Transactions = () => {
                     }
                   </td>
                   <td className={cn("px-6 py-4 text-right font-medium", tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-500' : 'text-neutral-900 dark:text-neutral-100')}>
-                    {tx.type === 'income' ? '+' : '-'}${tx.amount.toFixed(2)}
+                    {tx.type === 'income' ? '+' : '-'}{currencySymbol}{tx.amount.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <AlertDialog>

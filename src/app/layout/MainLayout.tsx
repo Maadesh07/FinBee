@@ -4,7 +4,7 @@ import {
   LayoutDashboard,
   Receipt,
   PieChart,
-  Lightbulb,
+  Brain,
   Menu,
   X,
   Wallet,
@@ -30,7 +30,7 @@ export const MainLayout = () => {
     { name: t('transactions'), key: 'transactions', href: '/transactions', icon: Receipt },
     { name: t('budgets'), key: 'budgets', href: '/budgets', icon: PieChart },
     { name: t('calendar'), key: 'calendar', href: '/calendar', icon: CalendarDays },
-    { name: t('suggestions'), key: 'suggestions', href: '/suggestions', icon: Lightbulb },
+    { name: t('suggestions'), key: 'suggestions', href: '/suggestions', icon: Brain },
     { name: t('profile'), key: 'profile', href: '/profile', icon: UserCircle },
   ];
 

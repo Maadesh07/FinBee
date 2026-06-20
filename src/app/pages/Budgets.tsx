@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useFinance, Budget } from '../context/FinanceContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Plus, Trash2, Edit2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -28,7 +29,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
 
-const BudgetCard = ({ budget, spent, updateBudget, deleteBudget }: { budget: Budget, spent: number, updateBudget: (id: string, amount: number) => void, deleteBudget: (id: string) => void }) => {
+const BudgetCard = ({ budget, spent, updateBudget, deleteBudget, currencySymbol }: { budget: Budget, spent: number, updateBudget: (id: string, amount: number) => void, deleteBudget: (id: string) => void, currencySymbol: string }) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editAmount, setEditAmount] = useState(budget.amount.toString());
 
@@ -75,7 +76,7 @@ const BudgetCard = ({ budget, spent, updateBudget, deleteBudget }: { budget: Bud
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="amount">Amount ($)</Label>
+                    <Label htmlFor="amount">Amount ({currencySymbol})</Label>
                     <Input
                       id="amount"
                       type="number"
@@ -123,8 +124,8 @@ const BudgetCard = ({ budget, spent, updateBudget, deleteBudget }: { budget: Bud
 
       <div className="mt-auto space-y-3">
         <div className="flex justify-between text-sm">
-          <span className="text-neutral-500">Spent: <span className="font-medium text-neutral-900 dark:text-neutral-100">${spent.toFixed(2)}</span></span>
-          <span className="text-neutral-500">Limit: <span className="font-medium text-neutral-900 dark:text-neutral-100">${budget.amount.toFixed(2)}</span></span>
+          <span className="text-neutral-500">Spent: <span className="font-medium text-neutral-900 dark:text-neutral-100">{currencySymbol}{spent.toFixed(2)}</span></span>
+          <span className="text-neutral-500">Limit: <span className="font-medium text-neutral-900 dark:text-neutral-100">{currencySymbol}{budget.amount.toFixed(2)}</span></span>
         </div>
         
         <div className="w-full h-2.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
@@ -136,11 +137,11 @@ const BudgetCard = ({ budget, spent, updateBudget, deleteBudget }: { budget: Bud
         
         <div className="flex justify-between text-xs">
           <span className={isOver ? "text-rose-600 dark:text-rose-500 font-medium" : "text-neutral-500"}>
-            {isOver ? `$${(spent - budget.amount).toFixed(2)} over limit` : `${percentage.toFixed(0)}% used`}
+            {isOver ? `${currencySymbol}${(spent - budget.amount).toFixed(2)} over limit` : `${percentage.toFixed(0)}% used`}
           </span>
           {!isOver && (
             <span className="text-neutral-500 font-medium">
-              ${(budget.amount - spent).toFixed(2)} left
+              {currencySymbol}{(budget.amount - spent).toFixed(2)} left
             </span>
           )}
         </div>
@@ -151,6 +152,7 @@ const BudgetCard = ({ budget, spent, updateBudget, deleteBudget }: { budget: Bud
 
 export const Budgets = () => {
   const { budgets, transactions, addBudget, updateBudget, deleteBudget } = useFinance();
+  const { currencySymbol } = useLanguage();
   const [isAdding, setIsAdding] = useState(false);
   const [category, setCategory] = useState('Food');
   const [amount, setAmount] = useState('');
@@ -218,7 +220,7 @@ export const Budgets = () => {
               </select>
             </div>
             <div className="space-y-2 w-full">
-              <label className="text-sm font-medium">Limit ($)</label>
+              <label className="text-sm font-medium">Limit ({currencySymbol})</label>
               <input 
                 required
                 type="number"
@@ -242,12 +244,13 @@ export const Budgets = () => {
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {budgets.length > 0 ? budgets.map((budget) => (
-          <BudgetCard 
-            key={budget.id} 
-            budget={budget} 
-            spent={spentByCategory[budget.category] || 0} 
-            updateBudget={updateBudget} 
-            deleteBudget={deleteBudget} 
+          <BudgetCard
+            key={budget.id}
+            budget={budget}
+            spent={spentByCategory[budget.category] || 0}
+            updateBudget={updateBudget}
+            deleteBudget={deleteBudget}
+            currencySymbol={currencySymbol}
           />
         )) : (
           <div className="col-span-full py-12 text-center border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl">
