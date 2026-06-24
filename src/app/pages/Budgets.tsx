@@ -28,6 +28,7 @@ import {
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 const BudgetCard = ({ budget, spent, updateBudget, deleteBudget, currencySymbol }: { budget: Budget, spent: number, updateBudget: (id: string, amount: number) => void, deleteBudget: (id: string) => void, currencySymbol: string }) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -158,7 +159,7 @@ export const Budgets = () => {
   const [amount, setAmount] = useState('');
 
   // Default expense categories
-  const categories = ['Food', 'Housing', 'Transport', 'Entertainment', 'Shopping', 'Subscriptions', 'Utilities', 'Other'];
+  const categories = ['Food', 'Housing', 'Transport', 'Entertainment', 'Shopping', 'Subscriptions', 'Utilities', 'Education', 'Other'];
   
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,13 +212,16 @@ export const Budgets = () => {
           <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="space-y-2 w-full">
               <label className="text-sm font-medium">Category</label>
-              <select 
-                value={category} 
-                onChange={(e) => setCategory(e.target.value)}
-                className="flex h-10 w-full items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 dark:border-neutral-800 dark:bg-neutral-950 dark:ring-offset-neutral-950"
-              >
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger className="w-full h-10">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2 w-full">
               <label className="text-sm font-medium">Limit ({currencySymbol})</label>

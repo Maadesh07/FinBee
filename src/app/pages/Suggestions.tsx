@@ -1,31 +1,123 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
 import { useFinance } from '../context/FinanceContext';
 import {
   TrendingDown, Brain, Target, AlertTriangle, Star,
   ShieldAlert, Tv, Utensils, CheckCircle2
 } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
-} from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { useLanguage } from '../context/LanguageContext';
 import { Progress } from '../components/ui/progress';
 
-// ─── Custom dark tooltip for area chart ──────────────────────────────────────
-const AreaTooltip = ({ active, payload, label, currencySymbol }: any) => {
-  if (!active || !payload?.length) return null;
+// ─── Custom SVG area chart (replaces recharts to avoid duplicate key bug) ────
+function CustomAreaChart({ data, currencySymbol }: { data: { day: string; actual: number }[]; currencySymbol: string }) {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  const W = 600, H = 160, padL = 40, padR = 10, padT = 10, padB = 24;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+
+  const maxVal = Math.max(...data.map(d => d.actual), 1);
+  const xStep = data.length > 1 ? chartW / (data.length - 1) : chartW;
+
+  const pts = data.map((d, i) => ({
+    x: padL + i * xStep,
+    y: padT + chartH - (d.actual / maxVal) * chartH,
+    ...d,
+  }));
+
+  const linePath = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const areaPath = pts.length
+    ? `${linePath} L${pts[pts.length - 1].x.toFixed(1)},${(padT + chartH).toFixed(1)} L${pts[0].x.toFixed(1)},${(padT + chartH).toFixed(1)} Z`
+    : '';
+
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(f => ({
+    val: Math.round(maxVal * f),
+    y: padT + chartH - f * chartH,
+  }));
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    if (!svgRef.current || data.length === 0) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const mouseX = (e.clientX - rect.left) * (W / rect.width) - padL;
+    const idx = Math.min(data.length - 1, Math.max(0, Math.round(mouseX / xStep)));
+    setHoveredIdx(idx);
+  }, [data.length, xStep]);
+
   return (
-    <div className="bg-zinc-900/95 border border-zinc-700 rounded-lg px-3 py-2 text-sm shadow-xl">
-      <p className="text-zinc-400 text-xs mb-1.5 font-medium">Day {label}</p>
-      <div className="flex items-center gap-2">
-        <div className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
-        <span className="text-zinc-300 text-xs">Spent:</span>
-        <span className="text-blue-400 text-xs font-semibold">{currencySymbol}{Number(payload[0].value).toFixed(2)}</span>
-      </div>
+    <div className="relative w-full">
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full"
+        style={{ height: 200 }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoveredIdx(null)}
+      >
+        <defs>
+          <linearGradient id="sg-area-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
+            <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+
+        {/* Grid lines */}
+        {yTicks.map(t => (
+          <g key={`sg-grid-${t.val}`}>
+            <line x1={padL} x2={W - padR} y1={t.y} y2={t.y} stroke="currentColor" strokeOpacity={0.08} strokeWidth={1} />
+            <text x={padL - 4} y={t.y} textAnchor="end" dominantBaseline="middle" fontSize={9} fill="currentColor" opacity={0.4}>
+              {currencySymbol}{t.val}
+            </text>
+          </g>
+        ))}
+
+        {/* X-axis labels — every 5 days */}
+        {pts.filter((_, i) => i === 0 || (i + 1) % 5 === 0).map(p => (
+          <text key={`sg-x-${p.day}`} x={p.x} y={H - 4} textAnchor="middle" fontSize={9} fill="currentColor" opacity={0.4}>
+            {p.day}
+          </text>
+        ))}
+
+        {/* Area fill */}
+        {areaPath && <path d={areaPath} fill="url(#sg-area-grad)" />}
+
+        {/* Line */}
+        {linePath && <path d={linePath} fill="none" stroke="#3b82f6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
+
+        {/* Hover indicator */}
+        {hoveredIdx !== null && pts[hoveredIdx] && (
+          <>
+            <line
+              x1={pts[hoveredIdx].x} x2={pts[hoveredIdx].x}
+              y1={padT} y2={padT + chartH}
+              stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 2" strokeOpacity={0.5}
+            />
+            <circle cx={pts[hoveredIdx].x} cy={pts[hoveredIdx].y} r={4} fill="#3b82f6" stroke="white" strokeWidth={1.5} />
+          </>
+        )}
+      </svg>
+
+      {/* Tooltip */}
+      {hoveredIdx !== null && pts[hoveredIdx] && (
+        <div
+          className="absolute z-10 bg-zinc-900/95 border border-zinc-700 rounded-lg px-3 py-2 text-xs shadow-xl pointer-events-none"
+          style={{
+            left: `${(pts[hoveredIdx].x / W) * 100}%`,
+            top: 0,
+            transform: hoveredIdx > data.length * 0.7 ? 'translateX(-100%)' : 'translateX(8px)',
+          }}
+        >
+          <p className="text-zinc-400 mb-1 font-medium">Day {pts[hoveredIdx].day}</p>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-blue-400" />
+            <span className="text-zinc-300">Spent:</span>
+            <span className="text-blue-400 font-semibold">{currencySymbol}{pts[hoveredIdx].actual.toFixed(2)}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+}
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -430,21 +522,7 @@ export const Suggestions = () => {
             <CardDescription>Daily expense activity so far</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart id="suggestions-daily-spend-chart" data={dailyChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-neutral-100 dark:stroke-neutral-800" />
-                <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip content={(props) => <AreaTooltip {...props} currencySymbol={currencySymbol} />} />
-                <Area type="monotone" dataKey="actual" stroke="#3b82f6" fill="url(#colorActual)" strokeWidth={2} dot={false} isAnimationActive={false} />
-              </AreaChart>
-            </ResponsiveContainer>
+            <CustomAreaChart data={dailyChartData} currencySymbol={currencySymbol} />
           </CardContent>
         </Card>
       </div>

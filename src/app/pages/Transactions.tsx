@@ -5,6 +5,7 @@ import { Plus, Search, Trash2, Printer, ChevronLeft, ChevronRight } from 'lucide
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 // ─── Custom Month Picker ─────────────────────────────────────────────────────
 
@@ -305,9 +306,9 @@ export const Transactions = () => {
     return matchesSearch && matchesType;
   });
 
-  const categories = type === 'expense' 
-    ? ['Food', 'Housing', 'Transport', 'Entertainment', 'Shopping', 'Subscriptions', 'Utilities', 'Other']
-    : ['Salary', 'Freelance', 'Investments', 'Gift', 'Other'];
+  const categories = type === 'expense'
+    ? ['Food', 'Housing', 'Transport', 'Entertainment', 'Shopping', 'Subscriptions', 'Utilities', 'Education', 'Other']
+    : ['Salary', 'Part Time', 'Allowance', 'Allowance from Scholarship', 'From Parents', 'Freelance', 'Investments', 'Other'];
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -566,18 +567,22 @@ export const Transactions = () => {
           <h3 className="text-lg font-medium mb-4">New Transaction</h3>
           <form onSubmit={handleAdd} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
             <div className="space-y-2 lg:col-span-1">
-              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Type</label>
-              <select 
-                value={type} 
-                onChange={(e) => {
-                  setType(e.target.value as 'income' | 'expense');
-                  setCategory(e.target.value === 'expense' ? 'Food' : 'Salary');
+              <label className="text-sm font-medium leading-none">Type</label>
+              <Select
+                value={type}
+                onValueChange={(v) => {
+                  setType(v as 'income' | 'expense');
+                  setCategory(v === 'expense' ? 'Food' : 'Salary');
                 }}
-                className="flex h-10 w-full items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:ring-offset-neutral-950"
               >
-                <option value="expense">Expense</option>
-                <option value="income">Income</option>
-              </select>
+                <SelectTrigger className="h-10 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="expense">Expense</SelectItem>
+                  <SelectItem value="income">Income</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2 lg:col-span-2">
               <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Description</label>
@@ -603,14 +608,17 @@ export const Transactions = () => {
               />
             </div>
             <div className="space-y-2 lg:col-span-1">
-              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Category</label>
-              <select 
-                value={category} 
-                onChange={(e) => setCategory(e.target.value)}
-                className="flex h-10 w-full items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:ring-offset-neutral-950"
-              >
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <label className="text-sm font-medium leading-none">Category</label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger className="h-10 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2 lg:col-span-1">
               <label className="text-sm font-medium leading-none">Date</label>
@@ -641,15 +649,16 @@ export const Transactions = () => {
             />
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as any)}
-              className="flex h-9 w-full sm:w-auto items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-600 dark:border-neutral-800 dark:bg-neutral-950"
-            >
-              <option value="all">All Types</option>
-              <option value="income">Income Only</option>
-              <option value="expense">Expense Only</option>
-            </select>
+            <Select value={filterType} onValueChange={(v) => setFilterType(v as any)}>
+              <SelectTrigger className="h-9 w-full sm:w-36">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="income">Income Only</SelectItem>
+                <SelectItem value="expense">Expense Only</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         
